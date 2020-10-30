@@ -5,7 +5,7 @@ Config.Chance = 1                                   -- Chance that someone is ho
 Config.LargeHouse = 3                               -- This means a large house will give 1 to 3 candy (Default 3)
 Config.MediumHouse = 2                              -- This means a medium house will give 1 to 3 candy (Default 2)
 Config.SmallHouse = 1                               -- This means a small house will give 1 to 3 candy (Default 1)
-
+Config.Cooldown = 5 --in minutes
 -- Below are the coords for the houses
 Config.Houses = {
 

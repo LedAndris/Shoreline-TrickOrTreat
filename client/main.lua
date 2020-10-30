@@ -1,5 +1,7 @@
 local HasAlreadyEnteredMarker = false
 local LastHouse, LastPart
+local cd = Config.Cooldown * 60000
+local cache = {}
 
 ESX              = nil
 local PlayerData = {}
@@ -119,19 +121,12 @@ Citizen.CreateThread(function()
 		Citizen.Wait(0)
 
 		if CurrentAction then
-
 			ESX.ShowHelpNotification(CurrentActionMsg)
 
 			if IsControlJustReleased(0, 38) then
-				if CurrentAction == 'trick_large' then
-					TrickOrTreatLarge(CurrentAction)
-					print('large')
-				elseif CurrentAction == 'trick_medium' then
-					TrickOrTreatMedium(CurrentAction)
-					print('medium')
-				elseif CurrentAction == 'trick_small' then
-					TrickOrTreatSmall(CurrentAction)
-					print('small')
+				if CurrentAction == 'trick_large' or CurrentAction == 'trick_medium' or CurrentAction == 'trick_small' then
+					TrickOrTreat(CurrentAction)
+					print(CurrentAction:gsub("trick_", ""))
 				end
 
 				CurrentAction = nil
@@ -161,10 +156,33 @@ end)
 --
 -- Functions
 --
+function clean(t)
+	local ans = {}
+	for _,v in pairs(t) do
+	  ans[ #ans+1 ] = v
+	end
+	return ans
+  end
+  
 
-function TrickOrTreatLarge(house)
-
+function TrickOrTreat(house)
 	local playerPed = PlayerPedId()
+	local coords = GetEntityCoords(playerPed)
+	for k,v in ipairs(cache) do
+	if #(v.coords - coords) <= 1.00 then
+		local remtime = Ceil(((v.tick + cd) - GetGameTimer()) / 60000)
+		TriggerEvent("pNotify:SendNotification", {            
+			text = "Please wait ~~"..remtime.." minutes to knock here again",
+			type = "error",
+			timeout = 4000,
+			layout = "bottomRight",
+			queue = "right"})
+	return
+	end
+	end
+	cache[#cache + 1] = {}
+	cache[#cache + 1].coords = coords
+	cache[#cache + 1].tick = GetGameTimer()
 	local lib, anim = 'timetable@jimmy@doorknock@', 'knockdoor_idle'
 	ESX.Streaming.RequestAnimDict(lib, function()
 		TaskPlayAnim(playerPed, lib, anim, 8.0, -8.0, -1, 32, 0, false, false, false)
@@ -174,51 +192,16 @@ function TrickOrTreatLarge(house)
 			Citizen.Wait(0)
 			DisableAllControlActions(0)
 		end
-		
 		TriggerServerEvent('TrickOrTreat:giveItems', house)
 	end)
 end
 
-function TrickOrTreatMedium(house)
-
-	local playerPed = PlayerPedId()
-	local lib, anim = 'timetable@jimmy@doorknock@', 'knockdoor_idle'
-	ESX.Streaming.RequestAnimDict(lib, function()
-		TaskPlayAnim(playerPed, lib, anim, 8.0, -8.0, -1, 32, 0, false, false, false)
-
-		Citizen.Wait(500)
-		while IsEntityPlayingAnim(playerPed, lib, anim, 3) do
-			Citizen.Wait(0)
-			DisableAllControlActions(0)
-		end
-
-		print(house)
-		TriggerServerEvent('TrickOrTreat:giveItems', house)
-	end)
-end
-
-function TrickOrTreatSmall(house)
-
-	local playerPed = PlayerPedId()
-	local lib, anim = 'timetable@jimmy@doorknock@', 'knockdoor_idle'
-	ESX.Streaming.RequestAnimDict(lib, function()
-		TaskPlayAnim(playerPed, lib, anim, 8.0, -8.0, -1, 32, 0, false, false, false)
-
-		Citizen.Wait(500)
-		while IsEntityPlayingAnim(playerPed, lib, anim, 3) do
-			Citizen.Wait(0)
-			DisableAllControlActions(0)
-		end
-
-		TriggerServerEvent('TrickOrTreat:giveItems', house)
-	end)
-end
 
 -- Candy Effect
 RegisterNetEvent('TrickOrTreat:useCandy')
 AddEventHandler('TrickOrTreat:useCandy', function()
 
-	local playerPed = GetPlayerPed(-1)
+	local playerPed = PlayerPedId()
 
     RequestAnimSet("move_m@hurry_butch@a")
     while not HasAnimSetLoaded("move_m@hurry_butch@a") do
@@ -232,4 +215,19 @@ AddEventHandler('TrickOrTreat:useCandy', function()
 	Citizen.Wait(35000)
 	ResetPedMovementClipset(playerPed, 0)
     SetRunSprintMultiplierForPlayer(playerPed, 1.0)
+end)
+
+CreateThread(function() --cooldown manager
+	print("Cooldowns running")
+	
+while true do
+Wait(100)
+local thisTick = GetGameTimer() --no need to be that precise
+for k,v in ipairs(cache) do
+if v.tick + cd >= thisTick then
+cache[k] = nil
+cache = clean(cache) --clean up the nils
+end
+end
+end
 end)
