@@ -230,7 +230,7 @@ Wait(500)
 local thisTick = GetGameTimer() --no need to be that precise so we just save it at the start of the loop, other then calling it every loop tick
 for k,v in ipairs(cache) do
 	print("v.tick: "..v.tick.." cd: "..cd.." thisTick: "..thisTick)
-if thisTick - (cd + v.tick) <= 0 then
+if thisTick - (cd + v.tick) >= 0 then
 print("Removing expired cache element")
 cache[k] = nil
 cache = clean(cache) --clean up the nils
