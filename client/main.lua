@@ -157,6 +157,7 @@ end)
 -- Functions
 --
 function clean(t)
+	print("Cleaning up table")
 	local ans = {}
 	for _,v in pairs(t) do
 	  ans[ #ans+1 ] = v
@@ -168,8 +169,11 @@ function clean(t)
 function TrickOrTreat(house)
 	local playerPed = PlayerPedId()
 	local coords = GetEntityCoords(playerPed)
+	print("Looping cache")
 	for k,v in ipairs(cache) do
+		print("v.coords: "..v.coords, "v.tick: "..v.tick,  "coords: "..coords, "dist: "..#(v.coords - coords))
 	if #(v.coords - coords) <= 1.00 then
+		print("Seding notif")
 		local remtime = Ceil(((v.tick + cd) - GetGameTimer()) / 60000)
 		TriggerEvent("pNotify:SendNotification", {            
 			text = "Please wait ~~"..remtime.." minutes to knock here again",
@@ -181,8 +185,9 @@ function TrickOrTreat(house)
 	end
 	end
 	cache[#cache + 1] = {}
-	cache[#cache + 1].coords = coords
-	cache[#cache + 1].tick = GetGameTimer()
+	cache[#cache].coords = coords
+	cache[#cache].tick = GetGameTimer()
+	print("Caching coords: "..coords.." at tick: "..cache[#cache].tick)
 	local lib, anim = 'timetable@jimmy@doorknock@', 'knockdoor_idle'
 	ESX.Streaming.RequestAnimDict(lib, function()
 		TaskPlayAnim(playerPed, lib, anim, 8.0, -8.0, -1, 32, 0, false, false, false)
@@ -221,10 +226,12 @@ CreateThread(function() --cooldown manager
 	print("Cooldowns running")
 	
 while true do
-Wait(100)
-local thisTick = GetGameTimer() --no need to be that precise
+Wait(500)
+local thisTick = GetGameTimer() --no need to be that precise so we just save it at the start of the loop, other then calling it every loop tick
 for k,v in ipairs(cache) do
-if v.tick + cd >= thisTick then
+	print("v.tick: "..v.tick.." cd: "..cd.." thisTick: "..thisTick)
+if thisTick - (cd + v.tick) <= 0 then
+print("Removing expired cache element")
 cache[k] = nil
 cache = clean(cache) --clean up the nils
 end
